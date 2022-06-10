@@ -58,3 +58,30 @@ export async function redirect(req, res) {
         return res.status(500).send(err.message);
     }
 }
+
+export async function removeLink(req, res) {
+    const { id } = req.params;
+    const { authorization } = req.headers;
+    const token = authorization?.replace('Bearer ', '').trim();
+
+    try {
+        if (!token) {
+            return res.sendStatus(401);
+        }
+        // VALIDA TOKEN
+
+        if (!id) {
+            return res.sendStatus(404);
+        }
+        const link = await connection.query(`SELECT * FROM "shortLinks" WHERE id=$1`, [id]);
+        if (link.rowCount === 0) {
+            return res.sendStatus(404);
+        }
+        // VERIFICA SE É DO CARA
+
+        await connection.query(`DELETE FROM "shortLinks" WHERE id=$1`, [id]);
+        return res.sendStatus(204);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+}
