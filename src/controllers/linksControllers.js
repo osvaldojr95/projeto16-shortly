@@ -91,7 +91,6 @@ export async function removeLink(req, res) {
             return res.sendStatus(404);
         }
         const user = await connection.query(`SELECT "customerId" FROM sessions WHERE id=$1`, [tokenValidation.sessionId]);
-        console.log(link.rows[0].id, user.rows[0].customerId);
         if (link.rows[0].customerId !== user.rows[0].customerId) {
             return res.sendStatus(401);
         }
