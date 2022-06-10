@@ -30,6 +30,55 @@ export async function signin(req, res) {
     }
 }
 
+export async function getUser(req, res) {
+    const { id } = req.params;
+    const { authorization } = req.headers;
+    const token = authorization?.replace('Bearer ', '').trim();
+
+    try {
+        if (!token) {
+            return res.sendStatus(401);
+        }
+
+        if (!id) {
+            res.sendStatus(404);
+        }
+        const data = await connection.query(
+            `SELECT c.name, s.* FROM customers AS c
+            JOIN "shortLinks" AS s ON c.id=s."customerId"
+            WHERE c.id=$1
+            ORDER BY s.id;`,
+            [id]);
+        if (data.rowCount === 0) {
+            return res.sendStatus(404);
+        }
+
+        let sum = 0;
+        let list = data.rows.filter(item => {
+            sum += item.visitCount;
+            return (item.id ? true : false);
+        })
+        list = list.map(item => {
+            return {
+                id: item.id,
+                shortUrl: item.shortUrl,
+                url: item.url,
+                visitCount: item.visitCount
+            };
+        });
+        const obj = {
+            id: data.rows[0].customerId,
+            name: data.rows[0].name,
+            visitCount: sum,
+            shortenedUrls: list
+        }
+
+        return res.status(200).send(obj);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+}
+
 export async function ranking(req, res) {
     try {
         const ranking = await connection.query(
