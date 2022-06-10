@@ -20,7 +20,6 @@ export async function signin(req, res) {
 
     try {
         const exist = await connection.query(`SELECT COUNT(*) FROM customers WHERE "email"=$1 AND "password"=$2`, [email, password]);
-        console.log(exist.rows[0].count);
         if (Number(exist.rows[0].count) === 0) {
             return res.sendStatus(401);
         }
