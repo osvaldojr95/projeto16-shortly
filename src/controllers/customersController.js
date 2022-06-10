@@ -29,3 +29,17 @@ export async function signin(req, res) {
         return res.status(500).send(err.message);
     }
 }
+
+export async function ranking(req, res) {
+    try {
+        const ranking = await connection.query(
+            `SELECT c.id, c.name, COUNT(s.*) AS "linksCount", COALESCE(SUM(s."visitCount"), 0) AS "visitCount" FROM customers AS c
+            LEFT JOIN "shortLinks" AS s ON c.id=s."customerId"
+            GROUP BY c.id
+            ORDER BY COALESCE(SUM(s."visitCount"), 0) DESC
+            LIMIT 10;`);
+        return res.status(200).send(ranking.rows);
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+}
