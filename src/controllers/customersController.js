@@ -12,6 +12,11 @@ export async function signup(req, res) {
     }
 
     try {
+        const exist = await connection.query(`SELECT email FROM customers WHERE email=$1;`, [email]);
+        if (exist.rowCount > 0) {
+            return res.sendStatus(409);
+        }
+
         await connection.query(`INSERT INTO customers ("name","email","password") VALUES ($1,$2,$3);`, [name, email, bcrypt.hashSync(password, Number(process.env.HASH))]);
         return res.sendStatus(201);
     } catch (err) {

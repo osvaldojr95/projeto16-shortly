@@ -8,12 +8,13 @@ export async function shorten(req, res) {
     const { url } = req.body;
     const { authorization } = req.headers;
     const token = authorization?.replace('Bearer ', '').trim();
+    let tokenValidation;
 
     if (!token) {
         return res.sendStatus(401);
     }
     try {
-        const tokenValidation = jwt.verify(token, process.env.JWT_SECRET);
+        tokenValidation = jwt.verify(token, process.env.JWT_SECRET);
     } catch (e) {
         return res.sendStatus(401);
     }
@@ -22,7 +23,9 @@ export async function shorten(req, res) {
     shortUrl = nanoid();
 
     try {
-        await connection.query(`INSERT INTO "shortLinks" ("customerId","shortUrl","url") VALUES ($1,$2,$3);`, [1, shortUrl, url]);
+        const session = await connection.query(`SELECT "customerId" FROM sessions WHERE id=`, [tokenValidation.sessionId]);
+
+        await connection.query(`INSERT INTO "shortLinks" ("customerId","shortUrl","url") VALUES ($1,$2,$3);`, [session.rows[0].customerId, shortUrl, url]);
         return res.status(201).send({ shortUrl });
     } catch (err) {
         return res.status(500).send(err.message);
