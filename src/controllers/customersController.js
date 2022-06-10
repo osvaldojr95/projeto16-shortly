@@ -24,11 +24,10 @@ export async function signin(req, res) {
 
     try {
         const user = await connection.query(`SELECT id,password FROM customers WHERE "email"=$1`, [email]);
-        if (user.rowsCount === 0) {
+        if (user.rowCount === 0) {
             return res.sendStatus(401);
         }
 
-        console.log(password, user.rowsCount);
         if (!bcrypt.compareSync(password, user.rows[0].password)) {
             return res.sendStatus(401);
         }
