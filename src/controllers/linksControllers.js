@@ -23,7 +23,7 @@ export async function shorten(req, res) {
     shortUrl = nanoid();
 
     try {
-        const session = await connection.query(`SELECT "customerId" FROM sessions WHERE id=`, [tokenValidation.sessionId]);
+        const session = await connection.query(`SELECT "customerId" FROM sessions WHERE id=$1`, [tokenValidation.sessionId]);
 
         await connection.query(`INSERT INTO "shortLinks" ("customerId","shortUrl","url") VALUES ($1,$2,$3);`, [session.rows[0].customerId, shortUrl, url]);
         return res.status(201).send({ shortUrl });
