@@ -1,5 +1,8 @@
 import connection from '../controllers/database.js';
 import { nanoid } from 'nanoid';
+import dotenv from "dotenv";
+import jwt from 'jsonwebtoken';
+dotenv.config();
 
 export async function shorten(req, res) {
     const { url } = req.body;
@@ -7,6 +10,11 @@ export async function shorten(req, res) {
     const token = authorization?.replace('Bearer ', '').trim();
 
     if (!token) {
+        return res.sendStatus(401);
+    }
+    try {
+        const tokenValidation = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (e) {
         return res.sendStatus(401);
     }
 
@@ -63,12 +71,17 @@ export async function removeLink(req, res) {
     const { id } = req.params;
     const { authorization } = req.headers;
     const token = authorization?.replace('Bearer ', '').trim();
+    let tokenValidation;
 
     try {
         if (!token) {
             return res.sendStatus(401);
         }
-        // VALIDA TOKEN
+        try {
+            tokenValidation = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (e) {
+            return res.sendStatus(401);
+        }
 
         if (!id) {
             return res.sendStatus(404);
@@ -77,7 +90,11 @@ export async function removeLink(req, res) {
         if (link.rowCount === 0) {
             return res.sendStatus(404);
         }
-        // VERIFICA SE É DO CARA
+        const user = await connection.query(`SELECT "customerId" FROM sessions WHERE id=$1`, [tokenValidation.sessionId]);
+        console.log(link.rows[0].id, user.rows[0].customerId);
+        if (link.rows[0].customerId !== user.rows[0].customerId) {
+            return res.sendStatus(401);
+        }
 
         await connection.query(`DELETE FROM "shortLinks" WHERE id=$1`, [id]);
         return res.sendStatus(204);

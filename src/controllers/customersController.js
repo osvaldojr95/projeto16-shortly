@@ -1,4 +1,8 @@
 import connection from '../controllers/database.js';
+import dotenv from "dotenv";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+dotenv.config();
 
 export async function signup(req, res) {
     const { name, email, password, confirmPassword } = req.body;
@@ -8,7 +12,7 @@ export async function signup(req, res) {
     }
 
     try {
-        await connection.query(`INSERT INTO customers ("name","email","password") VALUES ($1,$2,$3);`, [name, email, password]);
+        await connection.query(`INSERT INTO customers ("name","email","password") VALUES ($1,$2,$3);`, [name, email, bcrypt.hashSync(password, Number(process.env.HASH))]);
         return res.sendStatus(201);
     } catch (err) {
         return res.status(500).send(err.message);
@@ -19,12 +23,21 @@ export async function signin(req, res) {
     const { email, password } = req.body;
 
     try {
-        const exist = await connection.query(`SELECT COUNT(*) FROM customers WHERE "email"=$1 AND "password"=$2`, [email, password]);
-        if (Number(exist.rows[0].count) === 0) {
+        const user = await connection.query(`SELECT id,password FROM customers WHERE "email"=$1`, [email]);
+        if (user.rowsCount === 0) {
             return res.sendStatus(401);
         }
 
-        return res.sendStatus(200);
+        if (!bcrypt.compareSync(password, user.rows[0].password)) {
+            return res.sendStatus(401);
+        }
+
+        const insert = await connection.query(`INSERT INTO sessions ("customerId") VALUES ($1) RETURNING id`, [user.rows[0].id]);
+        const chaveSecreta = process.env.JWT_SECRET;
+        const configuracoes = { expiresIn: 60 * 60 * 24 * 30 };
+        const token = jwt.sign({ sessionId: insert.rows[0].id }, chaveSecreta, configuracoes);
+
+        return res.status(200).send(token);
     } catch (err) {
         return res.status(500).send(err.message);
     }
@@ -39,7 +52,12 @@ export async function getUser(req, res) {
         if (!token) {
             return res.sendStatus(401);
         }
+        const tokenValidation = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (e) {
+        return res.sendStatus(401);
+    }
 
+    try {
         if (!id) {
             res.sendStatus(404);
         }
