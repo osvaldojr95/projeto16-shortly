@@ -28,6 +28,7 @@ export async function signin(req, res) {
             return res.sendStatus(401);
         }
 
+        console.log(password, user.rows[0]);
         if (!bcrypt.compareSync(password, user.rows[0].password)) {
             return res.sendStatus(401);
         }
